@@ -16,19 +16,24 @@ public class Game extends Application {
 
     private HashMap<KeyCode, Boolean> keys = new HashMap<KeyCode, Boolean>();
 
-    private ArrayList<Node> platforms = new ArrayList<Node>();
+    private ArrayList<Block> platforms = new ArrayList<>();
 
     private Pane appRoot = new Pane();
     private Pane gameRoot = new Pane();
     private Pane uiRoot = new Pane();
 
-    private Node player;
+    private int lives;
+    private Block player;
     private Point2D playerVelocity = new Point2D(0, 0);
     private boolean canJump = true;
 
     private int levelWidth;
 
     private void initContent() {
+        lives = 4;
+        player = new Block(0, 600, 40, 40, Color.CYAN);
+        gameRoot.getChildren().add(player);
+
         Rectangle background = new Rectangle(1280, 720);
         levelWidth = LevelData.LEVEL1[0].length() * 60;
 
@@ -39,14 +44,15 @@ public class Game extends Application {
                 case '0':
                     break;
                 case '1':
-                    Node platform = createEntity(j*60, i*60, 60, 60, Color.BROWN);
+                    Block platform = new Block(j*60, i*60, 60, 60, Color.BROWN);
+                    gameRoot.getChildren().add(platform);
                     platforms.add(platform);
                     break;
                 }
             }
         }
 
-        player = createEntity(0, 600, 40, 40, Color.CYAN);
+        resetPlayer();
 
         player.translateXProperty().addListener((obs, old, newValue) -> {
             int offset = newValue.intValue();
@@ -59,16 +65,26 @@ public class Game extends Application {
         appRoot.getChildren().addAll(background, gameRoot, uiRoot);
     }
 
+    private void resetPlayer() {
+        gameRoot.getChildren().remove(player);
+        player = new Block(0, 600, 40, 40, Color.CYAN);
+        gameRoot.getChildren().add(player);
+        lives--;
+    }
+
     private void update() {
-        if (isPressed(KeyCode.W) && player.getTranslateY() >= 5) {
+        if ((isPressed(KeyCode.W) || isPressed(KeyCode.UP))
+         && player.getTranslateY() >= 5) {
             jumpPlayer();
         }
 
-        if (isPressed(KeyCode.A) && player.getTranslateX() >= 5) {
+        if ((isPressed(KeyCode.A) || isPressed(KeyCode.LEFT))
+         && player.getTranslateX() >= 5) {
             movePlayerX(-5);
         }
 
-        if (isPressed(KeyCode.D) && player.getTranslateX() + 40 <= levelWidth - 5) {
+        if ((isPressed(KeyCode.D) || isPressed(KeyCode.RIGHT))
+         && player.getTranslateX() + 40 <= levelWidth - 5) {
             movePlayerX(5);
         }
 
@@ -76,14 +92,22 @@ public class Game extends Application {
             playerVelocity = playerVelocity.add(0, 1);
         }
 
+        if (isPressed(KeyCode.ENTER)) {
+            resetPlayer();
+        }
+
         movePlayerY((int)playerVelocity.getY());
+
+        if (player.getTranslateY() > 800) {
+            resetPlayer();
+        }
     }
 
     private void movePlayerX(int value) {
         boolean movingRight = value > 0;
 
         for(int i = 0; i < Math.abs(value); ++i) {
-            for (Node platform : platforms) {
+            for (Block platform : platforms) {
                 if (player.getBoundsInParent().intersects(platform.getBoundsInParent())) {
                     if (movingRight) {
                         if (player.getTranslateX() + 40 == platform.getTranslateX()) {
@@ -104,7 +128,7 @@ public class Game extends Application {
         boolean movingDown = value > 0;
 
         for(int i = 0; i < Math.abs(value); ++i) {
-            for (Node platform : platforms) {
+            for (Block platform : platforms) {
                 if (player.getBoundsInParent().intersects(platform.getBoundsInParent())) {
                     if (movingDown) {
                         if (player.getTranslateY() + 40 == platform.getTranslateY()) {
@@ -128,16 +152,6 @@ public class Game extends Application {
             playerVelocity = playerVelocity.add(0, -30);
             canJump = false;
         }
-    }
-
-    private Node createEntity(int x, int y, int w, int h, Color color) {
-        Rectangle entity = new Rectangle(w, h);
-        entity.setTranslateX(x);
-        entity.setTranslateY(y);
-        entity.setFill(color);
-
-        gameRoot.getChildren().add(entity);
-        return entity;
     }
 
     private boolean isPressed(KeyCode key) {
