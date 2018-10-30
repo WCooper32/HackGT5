@@ -2,6 +2,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Random;
 
+import javafx.scene.text.Font;
 import javafx.animation.AnimationTimer;
 import javafx.application.Application;
 import javafx.geometry.Point2D;
@@ -13,6 +14,11 @@ import javafx.scene.layout.Pane;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
+import javafx.scene.control.Label;
+import javafx.scene.layout.StackPane;
+import javafx.scene.layout.HBox;
+import javafx.geometry.Insets;
+
 
 public class Game extends Application {
 
@@ -20,9 +26,13 @@ public class Game extends Application {
 
     private ArrayList<Block> platforms = new ArrayList<>();
 
+    private StackPane display = new StackPane();
     private Pane appRoot = new Pane();
     private Pane gameRoot = new Pane();
     private Pane uiRoot = new Pane();
+    private HBox labels = new HBox();
+    private static Label score = new Label();
+    private static Label livesLabel = new Label();
 
     private int lives;
     private Block player;
@@ -43,19 +53,22 @@ public class Game extends Application {
     private Scene scene;
 
     private void initContent() {
-        lives = 4;
+        //initate the lives, player, and the game Root
+        lives = 6;
         player = new Block(0, 600, 40, 40, Color.CYAN);
         gameRoot.getChildren().add(player);
 
         Rectangle background = new Rectangle(1280, 720);
         levelWidth = LevelData.LEVEL1[0].length() * 60;
 
+        //detect where the coin can be placed
         for (int x = 0; x < 5; ++x) {
             for (int y = 0; y < 30; ++y) {
                 canPutCoinHere[x][y] = false;
             }
         }
 
+        //add the platforms
         for (int i = 0; i < LevelData.LEVEL1.length; ++i) {
             String line = LevelData.LEVEL1[i];
             for (int j = 0; j < line.length(); ++j) {
@@ -74,10 +87,21 @@ public class Game extends Application {
             }
         }
 
+        //get the label
+        this.livesLabel = new Label();
+        livesLabel.setTextFill(Color.WHITE);
+        livesLabel.setFont(new Font(40.0));
+
+        this.score = new Label();
+        score.setText("Score: 0");
+        score.setTextFill(Color.WHITE);
+        score.setFont(new Font(40.0));
+
         resetPlayer();
 
         generateCoins();
 
+        //make the screen follow the user
         player.translateXProperty().addListener((obs, old, newValue) -> {
             int offset = newValue.intValue();
 
@@ -86,7 +110,12 @@ public class Game extends Application {
             }
         });
 
+        labels.getChildren().addAll(livesLabel, score);
+        labels.setPadding(new Insets(10));
+        labels.setSpacing(50);
+
         appRoot.getChildren().addAll(background, gameRoot, uiRoot);
+        display.getChildren().addAll(appRoot, labels);
     }
 
     private void generateCoins() {
@@ -108,12 +137,16 @@ public class Game extends Application {
     }
 
     private void resetPlayer() {
+        //reset the Player and the window location
         player.setTranslateX(0);
         player.setTranslateY(0);
+        gameRoot.setLayoutX(0);
         lives--;
+        livesLabel.setText("Lives: " + lives);
     }
 
     private void update() {
+        //check to see if player is touching coin
         Bounds playerBounds = player.getBoundsInParent();
         double xMinPlayer = playerBounds.getMinX();
         double xMaxPlayer = playerBounds.getMaxX();
@@ -147,7 +180,6 @@ public class Game extends Application {
             gameRoot.getChildren().remove(coin);
             generateCoins();
         }
-        // System.out.println(totalCoins);
 
         if ((isPressed(KeyCode.W) || isPressed(KeyCode.UP))
          && player.getTranslateY() >= 5) {
@@ -180,7 +212,9 @@ public class Game extends Application {
     }
 
     private static void updateScore() {
+        //update totalCoins
         totalCoins = totalCoins + 1;
+        score.setText("Score: " + totalCoins);
     }
 
     private void movePlayerX(int value) {
@@ -228,6 +262,7 @@ public class Game extends Application {
     }
 
     private void jumpPlayer() {
+        //calculate velocity
         if (canJump) {
             playerVelocity = playerVelocity.add(0, -30);
             canJump = false;
@@ -235,15 +270,17 @@ public class Game extends Application {
     }
 
     private boolean isPressed(KeyCode key) {
+        //check to see if a key is pressed
         return keys.getOrDefault(key, false);
     }
 
     @Override
     public void start(Stage primaryStage) throws Exception{
+        //set up the screen
         this.primaryStage = primaryStage;
         initContent();
 
-        Scene scene = new Scene(appRoot);
+        Scene scene = new Scene(display);
         this.scene = scene;
         scene.setOnKeyPressed(event -> keys.put(event.getCode(), true));
         scene.setOnKeyReleased(event -> keys.put(event.getCode(), false));
